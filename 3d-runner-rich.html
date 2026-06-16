@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neon Puppy Bone Dash</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Arial Rounded MT Bold", "Yu Gothic UI", system-ui, sans-serif;
+      background: #090317;
+      color: #fff1ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 25% 10%, rgba(255, 91, 184, .28), transparent 30%),
+        radial-gradient(circle at 76% 24%, rgba(94, 234, 255, .18), transparent 28%),
+        linear-gradient(#080315, #140724 48%, #2b0d36);
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: max(18px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .brand {
+      max-width: min(56vw, 560px);
+      filter: drop-shadow(0 0 14px rgba(255, 77, 178, .8));
+    }
+
+    body[data-mode="playing"] .brand {
+      opacity: 0;
+    }
+
+    .title {
+      font-size: clamp(24px, 3.8vw, 50px);
+      line-height: .9;
+      color: #ff7fca;
+      letter-spacing: 0;
+      text-shadow: 0 0 14px #ff49af, 3px 3px 0 #32114d;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      color: rgba(255, 232, 255, .78);
+      font-size: clamp(12px, 1.3vw, 15px);
+      line-height: 1.5;
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      justify-content: end;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      min-width: 84px;
+      padding: 8px 10px 9px;
+      border: 2px solid rgba(255, 147, 212, .9);
+      border-radius: 8px;
+      background: rgba(18, 7, 34, .72);
+      box-shadow: 0 0 18px rgba(255, 93, 175, .42), inset 0 0 0 1px rgba(255,255,255,.13);
+      backdrop-filter: blur(12px);
+    }
+
+    .label {
+      display: block;
+      color: #94f3ff;
+      font-size: 10px;
+      line-height: 1;
+    }
+
+    .value {
+      display: block;
+      color: #fff3b7;
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .center {
+      display: grid;
+      place-items: center;
+    }
+
+    .screen {
+      width: min(520px, calc(100vw - 28px));
+      pointer-events: auto;
+      padding: 20px;
+      border: 2px solid rgba(255, 147, 212, .9);
+      border-radius: 10px;
+      background: rgba(18, 7, 34, .82);
+      box-shadow: 0 0 40px rgba(255, 77, 178, .32), 0 20px 80px rgba(0,0,0,.36), inset 0 0 0 1px rgba(255,255,255,.12);
+      backdrop-filter: blur(16px);
+    }
+
+    .screen[hidden] { display: none; }
+
+    .screen h1 {
+      margin: 0 0 10px;
+      font-size: clamp(34px, 7vw, 64px);
+      line-height: .9;
+      color: #ff7fca;
+      text-shadow: 0 0 16px #ff49af, 3px 3px 0 #32114d;
+      letter-spacing: 0;
+    }
+
+    .screen p {
+      margin: 0 0 16px;
+      color: rgba(255, 236, 255, .82);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .menu-row,
+    .result-grid {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .result-grid {
+      margin: 4px 0 16px;
+    }
+
+    .result-tile {
+      flex: 1 1 130px;
+      padding: 10px;
+      border: 1px solid rgba(148, 243, 255, .65);
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      box-shadow: 0 0 18px rgba(148, 243, 255, .18);
+    }
+
+    .result-tile span {
+      display: block;
+      color: #94f3ff;
+      font-size: 11px;
+    }
+
+    .result-tile strong {
+      display: block;
+      color: #fff3b7;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    button {
+      appearance: none;
+      min-height: 44px;
+      border: 1px solid rgba(255, 236, 255, .72);
+      border-radius: 9px;
+      padding: 0 16px;
+      color: #fff8d9;
+      background: linear-gradient(135deg, #ff5daf, #a35cff);
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 0 22px rgba(255, 93, 175, .36), inset 0 0 0 1px rgba(255,255,255,.18);
+      text-transform: uppercase;
+    }
+
+    button.secondary {
+      color: #170b2a;
+      background: linear-gradient(135deg, #94f3ff, #fff3b7);
+    }
+
+    button:active {
+      transform: translateY(2px);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: .62;
+      filter: grayscale(.25);
+    }
+
+    .bottom {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(255, 236, 255, .84);
+      font-size: 12px;
+      text-shadow: 0 0 9px rgba(255, 93, 175, .55);
+    }
+
+    .keys {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    kbd,
+    .status-pill {
+      min-width: 30px;
+      min-height: 28px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid rgba(255, 147, 212, .75);
+      border-radius: 999px;
+      background: rgba(18, 7, 34, .72);
+      box-shadow: 0 0 12px rgba(255,93,175,.28);
+      color: #fff3b7;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      padding: 0 9px;
+      backdrop-filter: blur(10px);
+    }
+
+    .touch {
+      display: none;
+      pointer-events: auto;
+      grid-template-columns: 82px 82px;
+      gap: 12px;
+    }
+
+    .touch button {
+      width: 82px;
+      height: 70px;
+      padding: 0;
+      font-size: 27px;
+      color: #fff8d9;
+      border-radius: 14px;
+    }
+
+    @media (max-width: 720px) {
+      .hud {
+        padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom)) 14px;
+      }
+
+      .brand,
+      .keys {
+        display: none;
+      }
+
+      .stats {
+        width: 100%;
+        justify-content: start;
+      }
+
+      .stat {
+        min-width: 76px;
+      }
+
+      .value {
+        font-size: 20px;
+      }
+
+      .screen {
+        padding: 18px;
+      }
+
+      .touch {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body data-mode="title">
+  <canvas id="game" aria-label="3D neon puppy runner"></canvas>
+  <main class="hud">
+    <section class="topbar" aria-label="Score panel">
+      <div class="brand">
+        <div class="title">Neon Puppy Bone Dash</div>
+        <div class="subtitle">あなたの犬モデルで走る、夜ピンクの3Dランナー。</div>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span class="label">BONES</span>
+          <span class="value" id="score">0</span>
+        </div>
+        <div class="stat">
+          <span class="label">LIFE</span>
+          <span class="value" id="lives">3</span>
+        </div>
+        <div class="stat">
+          <span class="label">BEST</span>
+          <span class="value" id="best">0</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="center">
+      <div class="screen" id="titleScreen">
+        <h1>Puppy<br>Dash</h1>
+        <p>骨を拾うほど、夜の道がネオンでにぎやかになる。最初はゆっくり、少し遊ぶと気持ちよく速くなるよ。</p>
+        <div class="menu-row">
+          <button id="startButton" disabled>Loading</button>
+          <button class="secondary" id="muteButton">Sound On</button>
+        </div>
+      </div>
+
+      <div class="screen" id="resultScreen" hidden>
+        <h1>Result</h1>
+        <div class="result-grid">
+          <div class="result-tile">
+            <span>BONES</span>
+            <strong id="finalScore">0</strong>
+          </div>
+          <div class="result-tile">
+            <span>BEST</span>
+            <strong id="finalBest">0</strong>
+          </div>
+        </div>
+        <p id="resultMessage">もう一回、骨をたくさん集めよう。</p>
+        <div class="menu-row">
+          <button id="retryButton">Retry</button>
+          <button class="secondary" id="titleButton">Title</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="bottom">
+      <div class="keys" aria-hidden="true">
+        <kbd>A</kbd><kbd>D</kbd><kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>SPACE</kbd>
+      </div>
+      <div class="touch" aria-label="Touch controls">
+        <button id="leftButton" aria-label="Move left">&larr;</button>
+        <button id="rightButton" aria-label="Move right">&rarr;</button>
+      </div>
+      <div class="status-pill" id="status">TITLE</div>
+    </section>
+  </main>
+
+  <script type="module">
+    import * as THREE from "./vendor/three/three.module.js";
+    import { FBXLoader } from "./vendor/three/examples/jsm/loaders/FBXLoader.js";
+
+    const canvas = document.getElementById("game");
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const bestEl = document.getElementById("best");
+    const titleScreen = document.getElementById("titleScreen");
+    const resultScreen = document.getElementById("resultScreen");
+    const finalScoreEl = document.getElementById("finalScore");
+    const finalBestEl = document.getElementById("finalBest");
+    const resultMessageEl = document.getElementById("resultMessage");
+    const startButton = document.getElementById("startButton");
+    const retryButton = document.getElementById("retryButton");
+    const titleButton = document.getElementById("titleButton");
+    const muteButton = document.getElementById("muteButton");
+    const statusEl = document.getElementById("status");
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x12071f, 0.034);
+
+    const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 160);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setClearColor(0x090317);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+
+    const keys = new Set();
+    const clock = new THREE.Clock();
+    const objects = [];
+    const particles = [];
+    const scenery = [];
+    let audioContext = null;
+    let soundOn = true;
+    let mode = "title";
+    let score = 0;
+    let runTime = 0;
+    let best = Number(localStorage.getItem("neon-puppy-best") || 0);
+    const START_SPEED = 5.7;
+    const MAX_LIVES = 3;
+    let speed = START_SPEED;
+    let lives = MAX_LIVES;
+    let invincibleTimer = 0;
+    let spawnTimer = 0;
+    let playerX = 0;
+    let playerVX = 0;
+    let worldOffset = 0;
+    let mixer = null;
+    let backdropMixer = null;
+    let dogActions = {};
+    let backdropActions = {};
+    let activeDogAction = "";
+    let activeBackdropAction = "";
+    let dogRoot = null;
+    let backdropDog = null;
+    let backdropHalo = null;
+    let fallbackDog = null;
+    let dogLoaded = false;
+
+    bestEl.textContent = String(best);
+
+    const pink = new THREE.Color(0xff5daf);
+    const cyan = new THREE.Color(0x7df4ff);
+    const gold = new THREE.Color(0xfff0a8);
+    const purple = new THREE.Color(0x8f5cff);
+
+    function makeMat(color, emissive = 0x000000, intensity = 0, roughness = .48, metalness = .02) {
+      return new THREE.MeshStandardMaterial({
+        color,
+        emissive,
+        emissiveIntensity: intensity,
+        roughness,
+        metalness
+      });
+    }
+
+    const mats = {
+      road: makeMat(0x2a123b, 0x451445, .26, .58),
+      roadNear: makeMat(0x71345f, 0xff4fad, .18, .55),
+      wall: makeMat(0x241040, 0x26104a, .42, .7),
+      bone: makeMat(0xffefc2, 0xffd96b, .38, .42),
+      obstacle: makeMat(0xff4e9d, 0xff2b8d, .34, .5),
+      obstacleTop: makeMat(0xffd55d, 0xffb12e, .38, .42),
+      dogPink: makeMat(0xff9acb, 0xff5daf, .14, .5),
+      dogCream: makeMat(0xffe8c4, 0xffc871, .08, .5),
+      dogBlue: makeMat(0x8befff, 0x57e5ff, .35, .38)
+    };
+
+    scene.add(new THREE.HemisphereLight(0xffd4f0, 0x140822, 2.2));
+    const moon = new THREE.DirectionalLight(0xffffff, 2.2);
+    moon.position.set(-4, 8, 5);
+    moon.castShadow = true;
+    moon.shadow.mapSize.set(1024, 1024);
+    scene.add(moon);
+    const neonLight = new THREE.PointLight(0xff4faf, 8, 24);
+    neonLight.position.set(0, 2.2, -3);
+    scene.add(neonLight);
+
+    const roadGroup = new THREE.Group();
+    scene.add(roadGroup);
+    for (let i = 0; i < 20; i++) {
+      const t = i / 19;
+      const geo = new THREE.BoxGeometry(9.5 - t * .9, .08, 3.2);
+      const mat = i < 5 ? mats.roadNear : mats.road;
+      const strip = new THREE.Mesh(geo, mat);
+      strip.position.set(0, -1.28, -4 - i * 3.2);
+      strip.receiveShadow = true;
+      roadGroup.add(strip);
+    }
+
+    const gridGroup = new THREE.Group();
+    scene.add(gridGroup);
+    const gridMat = new THREE.LineBasicMaterial({ color: 0xff62c4, transparent: true, opacity: .92 });
+    for (let i = 0; i <= 42; i++) {
+      const z = -i * 2;
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-4.8, -1.21, z), new THREE.Vector3(4.8, -1.21, z)]),
+        gridMat
+      );
+      gridGroup.add(line);
+    }
+    for (const x of [-3.2, 0, 3.2]) {
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, -1.2, 1), new THREE.Vector3(x, -1.2, -90)]),
+        gridMat
+      );
+      gridGroup.add(line);
+    }
+
+    for (const side of [-1, 1]) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(.16, 4, 96), mats.wall);
+      wall.position.set(side * 5.3, .05, -44);
+      wall.receiveShadow = true;
+      scene.add(wall);
+    }
+
+    const fallback = new THREE.Group();
+    function cube(w, h, d, mat, x, y, z) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      fallback.add(m);
+      return m;
+    }
+    cube(1.05, .45, 1.28, mats.dogPink, 0, -.34, 0);
+    cube(.7, .62, .58, mats.dogPink, 0, .05, .64);
+    cube(.36, .22, .28, mats.dogCream, 0, -.02, 1.04);
+    cube(.2, .48, .14, mats.dogPink, -.36, .34, .55).rotation.z = .3;
+    cube(.2, .48, .14, mats.dogPink, .36, .34, .55).rotation.z = -.3;
+    cube(.5, .12, .12, mats.dogBlue, 0, .45, .68);
+    cube(.18, .18, .12, mats.dogBlue, -.28, .45, .68);
+    cube(.18, .18, .12, mats.dogBlue, .28, .45, .68);
+    fallback.scale.set(.85, .85, .85);
+    fallback.position.set(0, -.15, 0);
+    scene.add(fallback);
+    fallbackDog = fallback;
+
+    const textureLoader = new THREE.TextureLoader();
+    const fbxLoader = new FBXLoader();
+    const dogTexture = textureLoader.load("dog-assets/Meshy_AI_Snowy_Scarf_Pup_biped_texture_0.png");
+    dogTexture.colorSpace = THREE.SRGBColorSpace;
+    const normalMap = textureLoader.load("dog-assets/Meshy_AI_Snowy_Scarf_Pup_biped_texture_0_normal.png");
+    const roughnessMap = textureLoader.load("dog-assets/Meshy_AI_Snowy_Scarf_Pup_biped_texture_0_roughness.png");
+
+    function normalizedClip(clip, name) {
+      const cloned = clip.clone();
+      cloned.name = name;
+      return cloned;
+    }
+
+    function setAction(actions, activeName, nextName, fade = .25) {
+      if (!actions[nextName] || activeName === nextName) return activeName;
+      const next = actions[nextName];
+      next.enabled = true;
+      next.reset();
+      next.play();
+      if (activeName && actions[activeName]) {
+        next.crossFadeFrom(actions[activeName], fade, false);
+      }
+      return nextName;
+    }
+
+    function chooseActionName() {
+      if (mode !== "playing") return "walk";
+      if (speed < 7.4) return "walk";
+      if (speed < 11.4) return "run";
+      return "dash";
+    }
+
+    function loadAnimationClip(url, name, onClip) {
+      fbxLoader.load(url, asset => {
+        if (asset.animations && asset.animations[0]) {
+          onClip(normalizedClip(asset.animations[0], name));
+        }
+      });
+    }
+
+    fbxLoader.load("dog-assets/pup-runfast.fbx", model => {
+      dogRoot = model;
+      model.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          child.material = new THREE.MeshStandardMaterial({
+            map: dogTexture,
+            normalMap,
+            roughnessMap,
+            roughness: .55,
+            metalness: .02,
+            emissive: 0x2b0b24,
+            emissiveIntensity: .05
+          });
+        }
+      });
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center);
+      const scale = 1.02 / Math.max(size.x, size.y, size.z);
+      model.scale.setScalar(scale);
+      model.rotation.y = Math.PI;
+      model.position.set(0, -1.02, -.45);
+      scene.add(model);
+      fallback.visible = false;
+      dogLoaded = true;
+      if (model.animations.length) {
+        mixer = new THREE.AnimationMixer(model);
+        dogActions.dash = mixer.clipAction(normalizedClip(model.animations[0], "dash"));
+        dogActions.dash.play();
+        activeDogAction = "dash";
+        loadAnimationClip("dog-assets/pup-running.fbx", "run", clip => {
+          dogActions.run = mixer.clipAction(clip);
+        });
+        loadAnimationClip("dog-assets/pup-walking.fbx", "walk", clip => {
+          dogActions.walk = mixer.clipAction(clip);
+        });
+      }
+    }, undefined, () => {
+      dogLoaded = false;
+      fallback.visible = true;
+    });
+
+    fbxLoader.load("dog-assets/pup-runfast.fbx", model => {
+      backdropDog = model;
+      model.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = false;
+          child.receiveShadow = false;
+          child.material = new THREE.MeshStandardMaterial({
+            map: dogTexture,
+            normalMap,
+            roughnessMap,
+            transparent: false,
+            opacity: 1,
+            depthWrite: true,
+            roughness: .62,
+            metalness: .02,
+            emissive: 0x3a1531,
+            emissiveIntensity: .16
+          });
+        }
+      });
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center);
+      const scale = 5.2 / Math.max(size.x, size.y, size.z);
+      model.scale.setScalar(scale);
+      model.rotation.y = 0;
+      model.position.set(0, 1.05, -19);
+      model.renderOrder = -1;
+      scene.add(model);
+      backdropHalo = new THREE.Mesh(
+        new THREE.TorusGeometry(2.15, .035, 12, 96),
+        new THREE.MeshBasicMaterial({
+          color: 0xff7fca,
+          transparent: true,
+          opacity: .42,
+          depthWrite: false
+        })
+      );
+      backdropHalo.position.set(0, 1.05, -19.2);
+      scene.add(backdropHalo);
+      if (model.animations.length) {
+        backdropMixer = new THREE.AnimationMixer(model);
+        backdropActions.dash = backdropMixer.clipAction(normalizedClip(model.animations[0], "dash"));
+        backdropActions.dash.play();
+        activeBackdropAction = "dash";
+        loadAnimationClip("dog-assets/pup-running.fbx", "run", clip => {
+          backdropActions.run = backdropMixer.clipAction(clip);
+        });
+        loadAnimationClip("dog-assets/pup-walking.fbx", "walk", clip => {
+          backdropActions.walk = backdropMixer.clipAction(clip);
+        });
+      }
+    });
+
+    function setMode(next) {
+      mode = next;
+      document.body.dataset.mode = next;
+      titleScreen.hidden = next !== "title";
+      resultScreen.hidden = next !== "result";
+      statusEl.textContent = next === "playing" ? "DASH" : next.toUpperCase();
+    }
+
+    function beep(freq, length, gain) {
+      if (!soundOn) return;
+      audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioContext.createOscillator();
+      const amp = audioContext.createGain();
+      osc.frequency.value = freq;
+      osc.type = "square";
+      amp.gain.value = gain;
+      amp.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + length);
+      osc.connect(amp).connect(audioContext.destination);
+      osc.start();
+      osc.stop(audioContext.currentTime + length);
+    }
+
+    function startGame() {
+      score = 0;
+      runTime = 0;
+      speed = START_SPEED;
+      lives = MAX_LIVES;
+      invincibleTimer = 0;
+      spawnTimer = .45;
+      playerX = 0;
+      playerVX = 0;
+      worldOffset = 0;
+      for (const object of objects.splice(0)) scene.remove(object.root);
+      for (const p of particles.splice(0)) scene.remove(p.mesh);
+      scoreEl.textContent = "0";
+      livesEl.textContent = String(lives);
+      setMode("playing");
+      beep(523, .08, .08);
+      setTimeout(() => beep(784, .09, .06), 70);
+    }
+
+    function showTitle() {
+      lives = MAX_LIVES;
+      livesEl.textContent = String(lives);
+      setMode("title");
+    }
+
+    function endGame() {
+      if (mode !== "playing") return;
+      best = Math.max(best, Math.floor(score));
+      localStorage.setItem("neon-puppy-best", String(best));
+      bestEl.textContent = String(best);
+      finalScoreEl.textContent = String(Math.floor(score));
+      finalBestEl.textContent = String(best);
+      resultMessageEl.textContent = score >= best && score > 0 ? "新記録。夜道の骨集め、かなりいい走りです。" : "もう一回、骨をたくさん集めよう。";
+      burst(playerX, 0, pink, 46);
+      setMode("result");
+      beep(130, .18, .12);
+    }
+
+    function takeDamage() {
+      if (invincibleTimer > 0 || mode !== "playing") return;
+      lives = Math.max(0, lives - 1);
+      livesEl.textContent = String(lives);
+      burst(playerX, 0, pink, 34);
+      burst(playerX, 0, cyan, 18);
+      beep(180, .12, .1);
+      if (lives <= 0) {
+        endGame();
+        return;
+      }
+      speed = START_SPEED;
+      runTime = 0;
+      spawnTimer = Math.max(spawnTimer, .8);
+      invincibleTimer = 1.35;
+      playerVX *= .25;
+      setTimeout(() => beep(420, .08, .06), 120);
+    }
+
+    function createBone(x, z) {
+      const root = new THREE.Group();
+      const shaft = new THREE.Mesh(new THREE.CapsuleGeometry(.08, .7, 8, 16), mats.bone);
+      shaft.rotation.z = Math.PI / 2;
+      root.add(shaft);
+      for (const sx of [-.42, .42]) {
+        for (const sy of [-.13, .13]) {
+          const knob = new THREE.Mesh(new THREE.SphereGeometry(.16, 16, 12), mats.bone);
+          knob.position.set(sx, sy, 0);
+          root.add(knob);
+        }
+      }
+      root.position.set(x, -.18, z);
+      root.traverse(child => { if (child.isMesh) child.castShadow = true; });
+      scene.add(root);
+      return root;
+    }
+
+    function createObstacle(x, z) {
+      const root = new THREE.Group();
+      const box = new THREE.Mesh(new THREE.BoxGeometry(.9, .9, .9), mats.obstacle);
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(.98, .12, .98), mats.obstacleTop);
+      lid.position.y = .52;
+      const bow = new THREE.Mesh(new THREE.TorusKnotGeometry(.18, .05, 36, 8), mats.dogBlue);
+      bow.position.set(0, .72, .48);
+      root.add(box, lid, bow);
+      root.position.set(x, -.55, z);
+      root.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+      scene.add(root);
+      return root;
+    }
+
+    function spawnObject() {
+      const lane = Math.floor(Math.random() * 5) - 2;
+      const laneSpacing = innerWidth <= 720 ? 1.25 : 1.85;
+      const type = Math.random() < .68 ? "box" : "bone";
+      const z = -54 - Math.random() * 12;
+      const x = lane * laneSpacing;
+      const root = type === "bone" ? createBone(x, z) : createObstacle(x, z);
+      objects.push({ type, root, x, z, hit: false });
+    }
+
+    function burst(x, z, color, count = 40) {
+      for (let i = 0; i < count; i++) {
+        const geo = new THREE.SphereGeometry(.035 + Math.random() * .04, 8, 6);
+        const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .95 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, -.15, z);
+        scene.add(mesh);
+        const angle = Math.random() * Math.PI * 2;
+        particles.push({
+          mesh,
+          vx: Math.cos(angle) * (1.2 + Math.random() * 4),
+          vy: 1.2 + Math.random() * 4.4,
+          vz: Math.sin(angle) * (1.2 + Math.random() * 4),
+          life: .72 + Math.random() * .28
+        });
+      }
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(.45, .025, 8, 48),
+        new THREE.MeshBasicMaterial({ color: 0x7df4ff, transparent: true, opacity: .9 })
+      );
+      ring.position.set(x, -.1, z);
+      ring.rotation.x = Math.PI / 2;
+      scene.add(ring);
+      particles.push({ mesh: ring, vx: 0, vy: 1.5, vz: 0, life: .42, ring: true });
+    }
+
+    function updateScenery() {
+      const level = Math.min(6, Math.floor(score / 170));
+      while (scenery.length < 10 + level * 5) {
+        const i = scenery.length;
+        const side = i % 2 === 0 ? -1 : 1;
+        const root = new THREE.Group();
+        const color = i % 3 === 0 ? cyan : i % 3 === 1 ? pink : purple;
+        const mat = new THREE.MeshBasicMaterial({ color });
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 1.5 + level * .15, 8), mat);
+        const star = new THREE.Mesh(new THREE.OctahedronGeometry(.18 + level * .01), mat);
+        star.position.y = .92 + level * .08;
+        root.add(pole, star);
+        root.position.set(side * (5.1 + Math.random() * .35), -.5, -8 - i * 4.7);
+        scene.add(root);
+        scenery.push(root);
+      }
+      scenery.forEach((root, i) => {
+        root.position.z += speed * .016;
+        root.rotation.y += .015;
+        if (root.position.z > 5) root.position.z = -56 - Math.random() * 10;
+      });
+    }
+
+    function update(dt) {
+      const left = keys.has("ArrowLeft") || keys.has("KeyA");
+      const right = keys.has("ArrowRight") || keys.has("KeyD");
+      if (mode === "playing") {
+        runTime += dt;
+        invincibleTimer = Math.max(0, invincibleTimer - dt);
+        const direction = (right ? 1 : 0) - (left ? 1 : 0);
+        playerVX += direction * 24 * dt;
+        playerVX *= Math.pow(.008, dt);
+        playerX += playerVX * dt;
+        const laneLimit = innerWidth <= 720 ? 2.45 : 4.05;
+        if (playerX < -laneLimit) { playerX = -laneLimit; playerVX *= -.15; }
+        if (playerX > laneLimit) { playerX = laneLimit; playerVX *= -.15; }
+        speed = Math.min(17, speed + dt * (.2 + runTime * .016 + score * .00007));
+        worldOffset += speed * dt;
+        score += dt * (2 + speed * .17);
+        scoreEl.textContent = String(Math.floor(score));
+        spawnTimer -= dt;
+        if (spawnTimer <= 0) {
+          spawnObject();
+          spawnTimer = Math.max(.4, 1.18 - speed * .034) + Math.random() * .28;
+        }
+      } else {
+        worldOffset += 2.8 * dt;
+        playerVX *= .9;
+        playerX += (0 - playerX) * dt * 2;
+      }
+
+      const dog = dogLoaded ? dogRoot : fallbackDog;
+      if (dog) {
+        dog.position.x = playerX;
+        dog.rotation.z = THREE.MathUtils.clamp(-playerVX * .025, -.25, .25);
+        dog.position.y = dogLoaded ? -.95 + Math.sin(performance.now() * .008) * .035 : -.15 + Math.sin(performance.now() * .008) * .04;
+        dog.visible = invincibleTimer <= 0 || Math.sin(performance.now() * .03) > -.2;
+      }
+      const nextAction = chooseActionName();
+      activeDogAction = setAction(dogActions, activeDogAction, nextAction, .28);
+      activeBackdropAction = setAction(backdropActions, activeBackdropAction, nextAction, .35);
+      const animationRate = mode === "playing" ? THREE.MathUtils.clamp(speed / 7.2, .75, 1.9) : .65;
+      if (mixer) mixer.update(dt * animationRate);
+      if (backdropDog) {
+        const t = performance.now() * .001;
+        backdropDog.position.x = Math.sin(t * .55) * .35;
+        backdropDog.position.y = 1.05 + Math.sin(t * 1.4) * .05;
+        backdropDog.rotation.y = Math.sin(t * .45) * .08;
+        backdropDog.visible = true;
+      }
+      if (backdropHalo) {
+        const t = performance.now() * .001;
+        backdropHalo.position.x = Math.sin(t * .55) * .35;
+        backdropHalo.position.y = 1.05 + Math.sin(t * 1.4) * .05;
+        backdropHalo.rotation.z += dt * .3;
+      }
+      if (backdropMixer) backdropMixer.update(dt * animationRate);
+
+      roadGroup.position.z = worldOffset % 3.2;
+      gridGroup.position.z = worldOffset % 2;
+      neonLight.position.x = playerX;
+      neonLight.intensity = 7 + Math.sin(performance.now() * .006) * 1.4 + Math.min(4, score / 280);
+      updateScenery();
+
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const object = objects[i];
+        if (mode === "playing") object.z += speed * dt;
+        object.root.position.z = object.z;
+        object.root.rotation.y += dt * (object.type === "bone" ? 4.4 : 1.2);
+        if (mode === "playing" && !object.hit && Math.abs(object.z) < .95 && Math.abs(object.x - playerX) < (object.type === "bone" ? .8 : .9)) {
+          object.hit = true;
+          if (object.type === "bone") {
+            score += 100;
+            burst(object.x, object.z, pink, 42);
+            burst(object.x, object.z, cyan, 28);
+            beep(880, .06, .07);
+            setTimeout(() => beep(1320, .07, .055), 45);
+          } else {
+            takeDamage();
+          }
+        }
+        if (object.z > 8 || (object.type === "bone" && object.hit)) {
+          scene.remove(object.root);
+          objects.splice(i, 1);
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        p.mesh.position.x += p.vx * dt;
+        p.mesh.position.y += p.vy * dt;
+        p.mesh.position.z += p.vz * dt + (mode === "playing" ? speed * dt : 0);
+        p.vy -= 5.8 * dt;
+        if (p.ring) {
+          p.mesh.scale.multiplyScalar(1 + dt * 3);
+          p.mesh.material.opacity = Math.max(0, p.life * 2);
+        }
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    function resize() {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    function render() {
+      const dt = Math.min(.033, clock.getDelta());
+      resize();
+      update(dt);
+      const mobile = innerWidth <= 720;
+      camera.position.set(playerX * (mobile ? .28 : .16), mobile ? 1.1 : 1.65, mobile ? 7.8 : 7.2);
+      camera.lookAt(playerX * (mobile ? .18 : .08), mobile ? -.35 : -.55, -6.5);
+      renderer.render(scene, camera);
+      requestAnimationFrame(render);
+    }
+
+    function setKey(code, isDown) {
+      if (isDown) keys.add(code);
+      else keys.delete(code);
+    }
+
+    window.addEventListener("keydown", event => {
+      if (["ArrowLeft", "ArrowRight", "KeyA", "KeyD", "Space"].includes(event.code)) event.preventDefault();
+      if (event.code === "Space" && mode !== "playing") startGame();
+      setKey(event.code, true);
+    });
+    window.addEventListener("keyup", event => setKey(event.code, false));
+    startButton.addEventListener("click", startGame);
+    retryButton.addEventListener("click", startGame);
+    titleButton.addEventListener("click", showTitle);
+    muteButton.addEventListener("click", () => {
+      soundOn = !soundOn;
+      muteButton.textContent = soundOn ? "Sound On" : "Sound Off";
+    });
+
+    function bindTouch(button, code) {
+      const down = event => {
+        event.preventDefault();
+        if (mode === "playing") setKey(code, true);
+      };
+      const up = event => {
+        event.preventDefault();
+        setKey(code, false);
+      };
+      button.addEventListener("pointerdown", down);
+      button.addEventListener("pointerup", up);
+      button.addEventListener("pointercancel", up);
+      button.addEventListener("pointerleave", up);
+    }
+
+    bindTouch(document.getElementById("leftButton"), "ArrowLeft");
+    bindTouch(document.getElementById("rightButton"), "ArrowRight");
+    addEventListener("resize", resize);
+    setMode("title");
+    startButton.disabled = false;
+    startButton.textContent = "Start";
+    render();
+  </script>
+</body>
+</html>
