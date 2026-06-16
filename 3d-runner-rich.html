@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Neon Puppy Bone Dash</title>
   <link rel="icon" href="data:,">
   <style>
@@ -21,6 +21,8 @@
       height: 100%;
       margin: 0;
       overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
       background:
         radial-gradient(circle at 25% 10%, rgba(255, 91, 184, .28), transparent 30%),
         radial-gradient(circle at 76% 24%, rgba(94, 234, 255, .18), transparent 28%),
@@ -177,6 +179,10 @@
 
     button {
       appearance: none;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
       min-height: 44px;
       border: 1px solid rgba(255, 236, 255, .72);
       border-radius: 9px;
@@ -974,15 +980,35 @@
       else keys.delete(code);
     }
 
-    window.addEventListener("keydown", event => {
-      if (["ArrowLeft", "ArrowRight", "KeyA", "KeyD", "Space"].includes(event.code)) event.preventDefault();
+    const controlCodes = new Set(["ArrowLeft", "ArrowRight", "KeyA", "KeyD", "Space"]);
+    function keepGameFocus() {
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
+      canvas.focus({ preventScroll: true });
+    }
+
+    canvas.setAttribute("tabindex", "0");
+    canvas.addEventListener("pointerdown", keepGameFocus);
+    document.addEventListener("pointerdown", event => {
+      if (event.target.closest("button")) return;
+      keepGameFocus();
+    }, { passive: true });
+
+    document.addEventListener("keydown", event => {
+      if (controlCodes.has(event.code)) event.preventDefault();
       if (event.code === "Space" && mode !== "playing") startGame();
       setKey(event.code, true);
+    }, { capture: true });
+    document.addEventListener("keyup", event => setKey(event.code, false), { capture: true });
+    window.addEventListener("blur", () => keys.clear());
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) keys.clear();
+      else keepGameFocus();
     });
-    window.addEventListener("keyup", event => setKey(event.code, false));
-    startButton.addEventListener("click", startGame);
-    retryButton.addEventListener("click", startGame);
-    titleButton.addEventListener("click", showTitle);
+    startButton.addEventListener("click", () => { startGame(); keepGameFocus(); });
+    retryButton.addEventListener("click", () => { startGame(); keepGameFocus(); });
+    titleButton.addEventListener("click", () => { showTitle(); keepGameFocus(); });
     muteButton.addEventListener("click", () => {
       soundOn = !soundOn;
       muteButton.textContent = soundOn ? "Sound On" : "Sound Off";
@@ -991,10 +1017,12 @@
     function bindTouch(button, code) {
       const down = event => {
         event.preventDefault();
+        button.setPointerCapture?.(event.pointerId);
         if (mode === "playing") setKey(code, true);
       };
       const up = event => {
         event.preventDefault();
+        button.releasePointerCapture?.(event.pointerId);
         setKey(code, false);
       };
       button.addEventListener("pointerdown", down);
