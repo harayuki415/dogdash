@@ -284,6 +284,29 @@
 
       .touch {
         display: grid;
+        grid-template-columns: 112px 112px;
+        justify-content: center;
+        width: 100%;
+        gap: 18px;
+      }
+
+      .touch button {
+        width: 112px;
+        height: 86px;
+        font-size: 34px;
+        border-radius: 18px;
+      }
+
+      .bottom {
+        position: relative;
+        justify-content: center;
+        align-items: end;
+      }
+
+      .status-pill {
+        position: fixed;
+        right: max(14px, env(safe-area-inset-right));
+        bottom: max(18px, env(safe-area-inset-bottom));
       }
     }
   </style>
